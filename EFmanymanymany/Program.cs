@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,37 +10,24 @@ namespace EFmanymanymany
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            DbInitializer.Init();
+
             using (var db = new DartsContext())
             {
-                db.Players.AddRange(new List<Player>{
-                            new Player { Name = "Sepp" },
-                            new Player { Name = "Hanna" },
-                            new Player { Name="Susanne"}
-                        }
-                    );
+                var games = db.Games.Include(g=>g.Positions).ThenInclude(p=>p.Player).ToList();
 
-                db.SaveChanges();
-                db.Games.Add(new Game
+                foreach (var g in games)
                 {
-                    Positions = new List<Position>
+                    string vs = ", ";
+                    if(!g.Positions.Any())
                     {
-                        new Position { Pos=1, Player = db.Players.First(p=>p.Name == "Susanne") },
-                        new Position { Pos=2, Player = db.Players.First(p=>p.Name == "Hanna") }
+                        Console.WriteLine($@"Game{g.Id} has no players yet");
+                        continue;
                     }
-                });
-
-                db.Games.Add(new Game
-                {
-                    Positions = new List<Position>
-                    {
-                        new Position { Pos = 1, Player = db.Players.First(p=>p.Name == "Sepp") },
-                        new Position { Pos = 2, Player = db.Players.First(p=>p.Name == "Hanna") }
-                    }
-                });
-
-
-                db.SaveChanges();
+                    
+                    string pos = string.Join(vs, g.Positions.Select(p => $@"{p.Pos}. {p.Player.Name}"));
+                    Console.WriteLine($@"Game{g.Id}: {pos}");
+                }
             }
         }
     }
